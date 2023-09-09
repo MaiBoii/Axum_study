@@ -20,15 +20,18 @@ use tower_http::services::ServeDir;
 
 #[tokio::main]
 async fn main() {
+    //라우터 모음
     let routes_all = Router::new()
+        //Hello 라우터 
         .merge(routes_hello())
+        //로그인 관련 라우터
         .merge(web::routes_login::routes())
         .layer(middleware::map_response(main_response_mapper))
         .layer(CookieManagerLayer::new())
         .fallback_service(routes_static());
 
 
-    // region:   ----start server
+    // region:   ----서버 스타팅
     let addr = SocketAddr::from(([127,0,0,1], 8080));
     println!("->> LISTENING on {addr}\n");
     axum::Server::bind(&addr)
@@ -53,8 +56,6 @@ fn routes_static() -> Router {
 struct HelloParams{
     name: Option<String>
 }
-
-
 
 fn routes_hello() -> Router {
     Router::new()
