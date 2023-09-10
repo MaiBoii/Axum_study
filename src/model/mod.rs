@@ -31,7 +31,7 @@ impl ModelController {
 /* --------------------------------- CRUD 구현 -------------------------------- */
 // ModelController의 CRUD 기능 구현하기
 impl ModelController{
-    // Create
+    // CREATE: 새로운 티켓 만들어내기
     pub async fn create_ticket(&self, ticket_fc: TicketForCreate) -> Result<Ticket>{
         // 
         let mut store = self.tickets_store.lock().unwrap();
@@ -61,7 +61,7 @@ impl ModelController{
 
         let ticket = store.get_mut(id as usize).and_then(|t| t.take());
 
-        todo!()
+        ticket.ok_or(Error::TicketDeleteFailIdNotFound { id })
     }
 }
 

@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.75"
-axum = "0.6.20"
+axum = { version = "0.6.20", features = ["macros"] }
 httpc-test = "0.1.5"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.105"
