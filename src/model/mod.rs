@@ -1,4 +1,4 @@
-use crate::{Error, Result};
+use crate::{Error, Result, ctx::Ctx};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 
@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 #[derive(Clone, Debug, Serialize)]
 pub struct Ticket {
     pub id: u64,
+    pub cid: u64,
     pub title:String,
 }
 
@@ -14,7 +15,6 @@ pub struct Ticket {
 #[derive(Clone)]
 pub struct ModelController {
     tickets_store: Arc<Mutex<Vec<Option<Ticket>>>>,
-
 }
 
 /* --------------------------------- 생성자 --------------------------------- */
@@ -32,13 +32,17 @@ impl ModelController {
 // ModelController의 CRUD 기능 구현하기
 impl ModelController{
     // CREATE: 새로운 티켓 만들어내기
-    pub async fn create_ticket(&self, ticket_fc: TicketForCreate) -> Result<Ticket>{
+    pub async fn create_ticket(
+        &self, 
+        ctx:Ctx,
+        ticket_fc: TicketForCreate) -> Result<Ticket>{
         // 
         let mut store = self.tickets_store.lock().unwrap();
 
         let id = store.len() as u64;
         let ticket = Ticket {
             id,
+            cid: ctx.user_id(),
             title: ticket_fc.title,
         };
         store.push(Some(ticket.clone()));
@@ -47,7 +51,7 @@ impl ModelController{
     }
 
     //LIST: 만들어둔 티켓 전부 보여주기
-    pub async fn list_ticket(&self) -> Result<Vec<Ticket>> {
+    pub async fn list_ticket(&self, _ctx:Ctx) -> Result<Vec<Ticket>> {
         let store = self.tickets_store.lock().unwrap();
 
         let tickets = store.iter().filter_map(|t| t.clone()).collect();
@@ -56,7 +60,7 @@ impl ModelController{
     }
 
     //DELETE: 있는 티켓 id로 지정해서 삭제하기
-    pub async fn delete_ticket(&self, id: u64) -> Result<Ticket>{
+    pub async fn delete_ticket(&self, _ctx: Ctx,id: u64) -> Result<Ticket>{
         let mut store = self.tickets_store.lock().unwrap();
 
         let ticket = store.get_mut(id as usize).and_then(|t| t.take());
