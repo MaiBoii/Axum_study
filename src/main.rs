@@ -14,6 +14,7 @@ use serde_json;
 use tower_cookies::CookieManagerLayer;
 use tower_http::services::ServeDir;
 
+mod ctx;
 mod error;
 mod web;
 mod model;
@@ -24,7 +25,7 @@ async fn main() -> Result<()>{
     let mc = ModelController::new().await?;
 
     let routes_apis = web::routes_ticket::routes(mc.clone())
-        .route_layer(middleware::from_fn(web::mw_auth::mw_require_auth));
+		.route_layer(middleware::from_fn(web::mw_auth::mw_require_auth));
 
     //라우터 모음
     let routes_all = Router::new()
@@ -51,7 +52,6 @@ async fn main() -> Result<()>{
 
 async fn main_response_mapper(res: Response) -> Response {
     println!("->> {:<12} - main_response_mapper", "RES_MAPPER");
-
     println!();
     res
 }
