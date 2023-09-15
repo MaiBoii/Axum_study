@@ -50,7 +50,7 @@ async fn main() -> Result<()>{
 
 /* --------------------------------- 서버 스타팅 --------------------------------- */
     //몰랐는데 이렇게 명시한 경로로만 접속해야 되더라. 
-    let addr = SocketAddr::from(([192,168,1,197], 8081));
+    let addr = SocketAddr::from(([127,0,0,1], 8081));
     println!("->>{addr}에서 듣고 있습니다....\n");
     axum::Server::bind(&addr)
         .serve(routes_all.into_make_service())
