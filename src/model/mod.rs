@@ -1,81 +1,31 @@
-use crate::{Error, Result, ctx::Ctx};
-use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+mod base;
+mod error;
+mod store;
+pub mod task;
+pub mod user;
 
-/* ---------------------------------- 티켓 타입 --------------------------------- */
-#[derive(Clone, Debug, Serialize)]
-pub struct Ticket {
-    pub id: u64,
-    pub cid: u64, //creator user id 라는 뜻 
-    pub title:String,
-}
-/* -------------------------------------------------------------------------- */
+pub use self::error::{Error, Result};
 
-/* --------------------------------- 모델 컨트롤러 -------------------------------- */
+use crate::model::store::{new_db_pool, Db};
+
+// endregion: --- Modules
+
 #[derive(Clone)]
-pub struct ModelController {
-    tickets_store: Arc<Mutex<Vec<Option<Ticket>>>>,
+pub struct ModelManager {
+	db: Db,
 }
-/* -------------------------------------------------------------------------- */
 
+impl ModelManager {
+	/// Constructor
+	pub async fn new() -> Result<Self> {
+		let db = new_db_pool().await?;
 
-/* --------------------------------- 생성자 --------------------------------- */
-//본인을 만들어내는 생성자
-impl ModelController {
-    pub async fn new() -> Result<Self> {
-        Ok(Self {
-            //Arc의 기본값으로 생성
-            tickets_store: Arc::default(),
-        })
-    }
+		Ok(ModelManager { db })
+	}
+
+	/// Returns the sqlx db pool reference.
+	/// (Only for the model layer)
+	pub(in crate::model) fn db(&self) -> &Db {
+		&self.db
+	}
 }
-/* -------------------------------------------------------------------------- */
-
-/* --------------------------------- CRUD 구현 -------------------------------- */
-// ModelController의 CRUD 기능 구현하기
-impl ModelController{
-    // CREATE: 새로운 티켓 만들어내기
-    pub async fn create_ticket(
-        &self, 
-        ctx:Ctx,
-        ticket_fc: TicketForCreate) -> Result<Ticket>{
-        // 
-        let mut store = self.tickets_store.lock().unwrap();
-
-        let id = store.len() as u64;
-        let ticket = Ticket {
-            id,
-            cid: ctx.user_id(),
-            title: ticket_fc.title,
-        };
-        store.push(Some(ticket.clone()));
-        
-        Ok(ticket)
-    }
-
-    //LIST: 만들어둔 티켓 전부 보여주기
-    pub async fn list_ticket(&self, _ctx:Ctx) -> Result<Vec<Ticket>> {
-        let store = self.tickets_store.lock().unwrap();
-
-        let tickets = store.iter().filter_map(|t| t.clone()).collect();
-
-        Ok(tickets)
-    }
-
-    //DELETE: 있는 티켓 id로 지정해서 삭제하기
-    pub async fn delete_ticket(&self, _ctx: Ctx,id: u64) -> Result<Ticket>{
-        let mut store = self.tickets_store.lock().unwrap();
-
-        let ticket = store.get_mut(id as usize).and_then(|t| t.take());
-
-        ticket.ok_or(Error::TicketDeleteFailIdNotFound { id })
-    }
-}
-/* -------------------------------------------------------------------------- */
-
-/* ---------------------------------- 티켓 양식 --------------------------------- */
-#[derive(Deserialize)]
-pub struct TicketForCreate{
-    pub title: String,
-}
-/* -------------------------------------------------------------------------- */
