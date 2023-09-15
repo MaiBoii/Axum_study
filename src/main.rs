@@ -2,13 +2,16 @@
 
 use std::net::SocketAddr;
 use crate::model::ModelController;
+use crate::log::log_request;
 pub use self::error::{Error, Result};
 
 use axum::{Router, middleware, Json};
 use axum::extract::{Path, Query};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, get_service};
+use axum::http::{Method, Uri};
 
+use ctx::Ctx;
 use serde::{Serialize,Deserialize};
 use serde_json::{self, json};
 use tower_cookies::CookieManagerLayer;
@@ -19,6 +22,7 @@ mod ctx;
 mod error;
 mod web;
 mod model;
+mod log;
 
 #[tokio::main]
 async fn main() -> Result<()>{
@@ -57,7 +61,11 @@ async fn main() -> Result<()>{
     }
 
 // RESPONSE 핸들러 알림 (12자 내로만)
-async fn main_response_mapper(res: Response) -> Response {
+async fn main_response_mapper(
+    ctx: Option<Ctx>,
+	uri: Uri,
+	req_method: Method,
+    res: Response) -> Response {
     println!("->> {:<12} - main_response_mapper", "RES_MAPPER");
     let uuid = Uuid::new_v4();
 
@@ -86,6 +94,8 @@ async fn main_response_mapper(res: Response) -> Response {
     // Build and log the server log line.
 	let client_error = client_status_error.unzip().1;
 	// TODO: Need to hander if log_request fail (but should not fail request)
+    let _ =
+		log_request(uuid, req_method, uri, ctx, service_error, client_error).await;
 
 	println!();
 	error_response.unwrap_or(res)
@@ -103,6 +113,8 @@ struct HelloParams{
     name: Option<String>
 }
 
+/* ----------------------------------- Say Hello --------------------------------------- */
+
 //hello 페이지 연결
 fn routes_hello() -> Router {
     //라우터 추가
@@ -110,6 +122,8 @@ fn routes_hello() -> Router {
         // /hello 라우터로 접속하면 get 요청으로 handler_hello 실행
         .route("/hello", get(handler_hello))   
 }
+
+/* -------------------------------------------------------------------------- */
 
 //handler_hello는 요청에서 받아온 HelloParams를 해독해서 실행
 async fn handler_hello(Query(params): Query<HelloParams>) -> impl IntoResponse {
