@@ -5,7 +5,7 @@ use serde::Serialize;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, strum_macros::AsRefStr)]
 pub enum Error{
     LoginFail,
 
@@ -42,4 +42,42 @@ impl IntoResponse for Error {
 
 		response
 	}
+}
+
+impl Error {
+	pub fn client_status_and_error(&self) -> (StatusCode, ClientError) {
+		#[allow(unreachable_patterns)]
+		match self {
+			Self::LoginFail => (StatusCode::FORBIDDEN, ClientError::LOGIN_FAIL),
+
+			// -- Auth.
+			Self::AuthFailNoAuthTokenCookie
+			| Self::AuthFailTokenWrongFormat
+			| Self::AuthFailCtxNotInRequestExt => {
+				(StatusCode::FORBIDDEN, ClientError::NO_AUTH)
+			}
+
+			// -- Model.
+			Self::TicketDeleteFailIdNotFound { .. } => {
+				(StatusCode::BAD_REQUEST, ClientError::INVALID_PARAMS)
+			}
+
+			// -- Fallback.
+			_ => (
+				StatusCode::INTERNAL_SERVER_ERROR,
+				ClientError::SERVICE_ERROR,
+			),
+		}
+	}
+}
+
+
+//enum 원소들을 전역 str 참조자들로 변환
+#[derive(Debug, strum_macros::AsRefStr)]
+#[allow(non_camel_case_types)]
+pub enum ClientError {
+	LOGIN_FAIL,
+	NO_AUTH,
+	INVALID_PARAMS,
+	SERVICE_ERROR,
 }
